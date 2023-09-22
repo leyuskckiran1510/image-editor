@@ -1,3 +1,6 @@
+#binary file
+image-editor
+
 # Prerequisites
 *.d
 
@@ -6,6 +9,7 @@
 *.ko
 *.obj
 *.elf
+*.out
 
 # Linker output
 *.ilk
@@ -50,3 +54,6 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# test files
+test*
