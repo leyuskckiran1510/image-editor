@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #define log(formate, ...)                                                      \
   printf("[ "__FILE__                                                          \
@@ -11,44 +12,133 @@
 
 typedef struct {
   union {
-    unsigned int r;
-    unsigned int red;
+    uint8_t r;
+    uint8_t red;
   };
   union {
-    unsigned int g;
-    unsigned int green;
+    uint8_t g;
+    uint8_t green;
   };
   union {
-    unsigned int b;
-    unsigned int blue;
+    uint8_t b;
+    uint8_t blue;
   };
   union {
-    unsigned int a;
-    unsigned int alpha;
+    uint8_t a;
+    uint8_t alpha;
   };
 } RGBa;
+
+typedef struct {
+  union {
+    uint8_t r;
+    uint8_t red;
+  };
+  union {
+    uint8_t g;
+    uint8_t green;
+  };
+  union {
+    uint8_t b;
+    uint8_t blue;
+  };
+} RGB;
 
 typedef struct {
   size_t width, height;
   RGBa *pixels;
 } PixelArray;
 
-#define U(x,name) unsigned char name[x]
+typedef union{
+  struct{
+    uint8_t width;
+    uint8_t height;
+    RGB palette[32];
+    uint8_t *pixels;// size width*height
+  }one_byte;
+  struct{
+    uint8_t width;
+    uint8_t height;
+    RGB *pixels;// size width*height
+  }three_byte;
 
-typedef unsigned short int u2;
+}ThumnailStore;
+
+typedef struct{
+  uint16_t lp;
+  char identifier[5];
+  uint8_t ext_code;
+  ThumnailStore thumnailstore;
+}EXAPP0;
 
 
 typedef struct{
-  short soi;
-  short marker;
-  short length;
-  U(5,identifier);
-  short version;
-  unsigned char density_unit;
-  short xdensity;
-  short ydensity;
-  unsigned char xthumbnail;
-  unsigned char ythumbnail;
+  uint16_t marker;
+  uint16_t length;
+  uint8_t *data;
+}COM;
+
+typedef struct{
+  uint16_t marker;
+  uint16_t length;
+  uint8_t precision;
+  uint8_t table_count;
+  uint8_t *table;
+}DQT;
+
+typedef struct{
+    uint8_t component_id;
+    uint8_t samplingfactor;
+    uint8_t dqt_table;
+} SOF_component;
+
+typedef struct{
+  uint16_t marker;
+  uint16_t length;
+  uint8_t precision;
+  union{
+  uint16_t height;
+  uint16_t image_height;
+  };
+  union{
+  uint16_t width;
+  uint16_t image_width;
+  };
+  union{
+    uint8_t component_count;
+    uint8_t total_component;
+  };
+  SOF_component *sofc;
+}SOF;
+
+
+typedef struct{
+  uint16_t marker;
+  uint16_t length;
+  uint16_t interval;
+} DRI;
+
+typedef struct{
+  uint16_t soi;
+  uint16_t marker;
+  uint16_t length;
+  char identifier[5];
+  uint16_t version;
+  uint8_t density_unit;
+  uint16_t xdensity;
+  uint16_t ydensity;
+  uint8_t xthumbnail;
+  uint8_t ythumbnail;
+  RGB *thumnaildata;
+  EXAPP0 exapp0;
+  COM comment;
+  DQT quantizetables;
+  union{
+  SOF start_of_frame0;
+  SOF sof0;
+  DRI defineRestartInterval;
+};
+
 } JPEG;
 
 
