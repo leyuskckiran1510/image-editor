@@ -119,6 +119,14 @@ typedef struct{
 } DRI;
 
 typedef struct{
+  uint16_t marker;
+  uint16_t length;
+  uint8_t tableinfo;
+  uint8_t symbolcount[16];
+  uint8_t *symbols;
+}DHT;
+
+typedef struct{
   uint16_t soi;
   uint16_t marker;
   uint16_t length;
@@ -136,8 +144,10 @@ typedef struct{
   union{
   SOF start_of_frame0;
   SOF sof0;
+  };
+
   DRI defineRestartInterval;
-};
+  DHT huffmantable;
 
 } JPEG;
 

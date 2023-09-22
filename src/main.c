@@ -42,6 +42,11 @@ void jpeg_display(JPEG j) {
   printf("%s %hu \n", "width", j.sof0.width);
   printf("%s %hu \n", "height", j.sof0.height);
   printf("%s %hu \n", "total component", j.sof0.total_component);
+
+  printf("------Define restart interval ( DRI )------\n");
+  printf("%s %hu \n", "length", j.defineRestartInterval.length);
+  printf("%s %hu \n", "marker", j.defineRestartInterval.marker);
+  printf("%s %hu \n", "interval", j.defineRestartInterval.interval);
 }
 
 void print(uint x) { printf("%s %hu \n", "UINT", x); }
@@ -155,74 +160,89 @@ void jpeg_cast(FILE *fp, JPEG *j) {
       dummy__ += fread(&j->sof0.sofc[i], 3, 1, fp);
     }
 
-
-    //next flag
+    // next flag
     dummy__ += fread(&next_flag, 2, 1, fp);
     break;
   }
   }
-  
-  log("NEXT FLAGGG");
-  log("Current DUMP location is %d", dummy__);
-  print(next_flag);
 
   switch (next_flag) {
-    case 0xddff:
-    case 0xffdd:{
-      dummy__ += fread(&j->defineRestartInterval.length, 2, 1, fp);
-      dummy__ += fread(&j->defineRestartInterval.interval, 2, 1, fp);
-      if (endian_cng) {
-        next_flag = __builtin_bswap16(next_flag);
-        j->defineRestartInterval.length = __builtin_bswap16(j->defineRestartInterval.length);
-        j->defineRestartInterval.interval = __builtin_bswap16(j->defineRestartInterval.interval);
-      }
-      j->defineRestartInterval.marker = next_flag;
-      //next flag
-
-      dummy__ += fread(&next_flag, 2, 1, fp);
-      // dummy__ += fread(&next_flag, 2, 1, fp);
-      break;
-      break;
-
+  case 0xddff:
+  case 0xffdd: {
+    dummy__ += fread(&j->defineRestartInterval.length, 2, 1, fp);
+    dummy__ += fread(&j->defineRestartInterval.interval, 2, 1, fp);
+    if (endian_cng) {
+      next_flag = __builtin_bswap16(next_flag);
+      j->defineRestartInterval.length =
+          __builtin_bswap16(j->defineRestartInterval.length);
+      j->defineRestartInterval.interval =
+          __builtin_bswap16(j->defineRestartInterval.interval);
     }
-  
-  }
-  
-   // 0xddff
-      /*
-      0xddff
-      0x400
-      0x6400
-      0xff64
-      */
+    j->defineRestartInterval.marker = next_flag;
 
+
+    // next flag
+    dummy__ += fread(&next_flag, 2, 1, fp);
+    break;
+    break;
+  }
+  }
+
+  log("Current File Pointer Location %d == %ld",dummy__,ftell(fp));
+  log("Next Flag is at %hu",next_flag);
+  fseek(fp,-2,SEEK_CUR);
+  log("Current File Pointer Location %d == %ld",dummy__,ftell(fp));
+  dummy__ += fread(&next_flag, 2, 1, fp);
+  log("Next Flag is at %hu",next_flag);
+  return;
+
+  switch (next_flag) {
+  case 0xffc4:
+  case 0xc4ff: {
+    dummy__ += fread(&j->huffmantable.length, 2, 1, fp);
+    dummy__ += fread(&j->huffmantable.tableinfo, 1, 1, fp);
+    if (endian_cng) {
+      next_flag = __builtin_bswap16(next_flag);
+      j->huffmantable.length =
+          __builtin_bswap16(j->huffmantable.length);
+    }
+    j->huffmantable.marker = next_flag;
+    log("length of data %hu",j->huffmantable.length);
+    for (int i = 0; i < 16; ++i)
+    {
+      dummy__+=fread(&j->huffmantable.symbolcount[i],1,1,fp);
+      print(j->huffmantable.symbolcount[i]);
+    }
+
+    // next flag
+    dummy__ += fread(&next_flag, 2, 1, fp);
+    break;
+    }
+  }
+
+  /*
   log("Starting...");
   log("Current DUMP location is %d", dummy__);
   print(next_flag);
-  // for (int p=0;p<10;p++) {
-  //   dummy__ += fread(&next_flag, 2, 1, fp);
-  //   print(next_flag);
-    switch (next_flag) {
-    case 0xffc4:
-    case 0xc4ff: {
+  for (int p=0;p<10;p++) {
+      dummy__ += fread(&next_flag, 2, 1, fp);
+      print(next_flag);
+      switch (next_flag) {
+      case 0xffc4:
+      case 0xc4ff: {
+        break;
+      }
+      case 65497:
+      case 0x99fd:{
+        break;
+      }
+      default:
+        continue;
+      }
       break;
-    }
-    case 65497:
-    case 0x99fd:{
-      break;
-    }
-    // default:
-      // continue;
-    }
-    // break;
-  // }
-  return;
-  /*0xffd9*/
-  /*
-    0x0102 -> version >= 01.02
-  */
+    }*/
 
-  (void)dummy__;
+  // (void)dummy__;
 }
 
 void load_image(const char *file_name) {
