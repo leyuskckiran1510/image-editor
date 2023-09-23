@@ -326,11 +326,11 @@ JPEG *jpeg_init() {
 
 JPEG *jpeg_load_image(const char *file_name) {
   FILE *f = fopen(file_name, "rb");
-  JPEG *temp = jpeg_init();
   if (f == NULL) {
     logn("Failed To Open the Image File %s", file_name);
     exit(1);
   }
+  JPEG *temp = jpeg_init();
   jpeg_cast(f, temp);
   return temp;
 }
@@ -386,7 +386,7 @@ void jpeg_free(JPEG *image) {
 
 int main(void) {
 
-  JPEG *image = jpeg_load_image("./src/test.jpg");
+  JPEG *image = jpeg_load_image("./Images/sample.jpg");
   jpeg_display(*image);
   jpeg_free(image);
   return 0;
