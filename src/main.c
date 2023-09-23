@@ -380,6 +380,7 @@ void jpeg_free(JPEG *image) {
 
   // finally free the JPEG struct pointer
   free(image);
+
   image = NULL;
 }
 

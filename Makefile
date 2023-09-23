@@ -1,7 +1,7 @@
 # Makefile for Your Project
 # Compiler
 CC = gcc
-DEBUGGER = gdb
+DEBUGGER = gf2
 
 # Compiler flags
 ifeq ($(OS),Windows_NT)
@@ -9,7 +9,7 @@ ifeq ($(OS),Windows_NT)
 	EXECUTABLE = image-editor.exe
 	LIBS = -lm -lWs2_32
 else
-	CFLAGS = -ggdb -Wall -Wextra -O3 -pedantic -fsanitize=address -s
+	CFLAGS = -ggdb -Wall -Wextra -O3 -pedantic -fsanitize=address
 	EXECUTABLE = image-editor
 	LIBS = -lm
 endif
