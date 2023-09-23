@@ -14,6 +14,7 @@
   printf("[ "__FILE__                                                          \
          ":%d ](message)\t\t" formate "\n",                                      \
          __LINE__, ##__VA_ARGS__);
+#define print(x) printf("%s %hu \n", "UINT", x)
 
 typedef struct {
   union {

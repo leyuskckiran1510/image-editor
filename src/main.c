@@ -1,13 +1,13 @@
 #include "image-editor.h"
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-
+#include "./jpeg/jpeg.h"
 /*
   [Wiki ] https://en.wikipedia.org/wiki/JPEG
-
 */
 void binary(unsigned short int x, char *final) {
   int p = 0;
@@ -17,60 +17,9 @@ void binary(unsigned short int x, char *final) {
   final[p] = '\0';
 }
 
-void jpeg_display(JPEG j) {
-  log("------Start Of JPEG IMAGE-------\n");
-  logn("%s %hu \n", "soi", j.soi);
 
-  log("------JPEG/JFIF Image Segment ( APP-0 )------\n");
-  log("%s %hu \n", "marker", j.marker);
-  log("%s %hu \n", "length", j.length);
-  log("%s %s \n", "identifier", j.identifier);
-  log("%s %hu \n", "version", j.version);
-  log("%s %hu \n", "density_unit", j.density_unit);
-  log("%s %hu \n", "xdensity", j.xdensity);
-  log("%s %hu \n", "ydensity", j.ydensity);
-  log("%s %hu \n", "xthumbnail", j.xthumbnail);
-  logn("%s %hu \n", "ythumbnail", j.ythumbnail);
 
-  log("------Comment Segment ( COM )------\n");
-  log("%s %hu \n", "length", j.comment.length);
-  log("%s %hu \n", "marker", j.comment.marker);
-  logn("%s %s \n", "precession", j.comment.data);
 
-  log("------Define Quantization Table Segment ( DQT )------\n");
-  log("%s %hu \n", "length", j.quantizetables.length);
-  log("%s %hu \n", "marker", j.quantizetables.marker);
-  log("%s %hu \n", "precession", j.quantizetables.precision);
-  logn("%s %hu \n", "table count", j.quantizetables.table_count);
-
-  log("------Start of Frame-0 Segment ( SOF-0 ) ------\n");
-  log("%s %hu \n", "length", j.sof0.length);
-  log("%s %hu \n", "marker", j.sof0.marker);
-  log("%s %hu \n", "precession", j.sof0.precision);
-  log("%s %hu \n", "width", j.sof0.width);
-  log("%s %hu \n", "height", j.sof0.height);
-  logn("%s %hu \n", "total component", j.sof0.total_component);
-
-  log("------Define restart interval ( DRI )------\n");
-  log("%s %hu \n", "length", j.defineRestartInterval.length);
-  log("%s %hu \n", "marker", j.defineRestartInterval.marker);
-  logn("%s %hu \n", "interval", j.defineRestartInterval.interval);
-
-  log("------Define Huffman Table Segment ( DHT )------\n");
-  log("%s %hu \n", "length", j.huffmantable.length);
-  log("%s %hu \n", "marker", j.huffmantable.marker);
-  logn("%s %hu \n", "tableinfo", j.huffmantable.tableinfo);
-
-  log("------Start of Scan Segment ( SOS )------\n");
-  log("%s %hu \n", "length", j.startofscan.length);
-  log("%s %hu \n", "marker", j.startofscan.marker);
-  logn("%s %hu \n", "total Component", j.startofscan.total_component);
-
-  log("------End of Image Segment ( EOI )------\n");
-  log("%s %hu \n", "marker", j.eof);
-}
-
-void print(uint x) { printf("%s %hu \n", "UINT", x); }
 
 void exapp0_cast(FILE *fp, EXAPP0 *exapp0) {
   (void)fp;
@@ -78,15 +27,15 @@ void exapp0_cast(FILE *fp, EXAPP0 *exapp0) {
   return;
 }
 
-void jpeg_cast(FILE *fp, JPEG *j) {
+void jpeg_cast1(FILE *fp, JPEG *j) {
   int dummy__ = 0, endian_cng = 0;
 
   // APP0 and headers
-  dummy__ += fread(&j->soi, 1, 2, fp);
-  dummy__ += fread(&j->marker, 1, 2, fp);
-  dummy__ += fread(&j->length, 1, 2, fp);
+  dummy__ += fread(&j->soi,2, 1, fp);
+  dummy__ += fread(&j->marker, 2, 1, fp);
+  dummy__ += fread(&j->length, 2, 1, fp);
   dummy__ += fread(&j->identifier, 5, 1, fp);
-  dummy__ += fread(&j->version, 1, 2, fp);
+  dummy__ += fread(&j->version, 2, 1, fp);
   dummy__ += fread(&j->density_unit, 1, 1, fp);
   dummy__ += fread(&j->xdensity, 2, 1, fp);
   dummy__ += fread(&j->ydensity, 2, 1, fp);
@@ -110,9 +59,11 @@ void jpeg_cast(FILE *fp, JPEG *j) {
 
   // thumnail from app0
   if (j->length > 16) {
-    log("Reached unreachable\n");
-    dummy__ +=
-        fread(j->thumnaildata, sizeof(RGB), j->xthumbnail * j->ythumbnail, fp);
+    logn("Reached unreachable");
+    logn("Not IMplemented the thumnail part...");
+    exit(0);
+    // dummy__ +=
+    //     fread(j->thumnaildata, sizeof(RGB), j->xthumbnail * j->ythumbnail, fp);
   }
   if (j->version >= 0x0102) {
     exapp0_cast(fp, &j->exapp0);
@@ -272,117 +223,8 @@ void jpeg_cast(FILE *fp, JPEG *j) {
   j->eof = next_flag;
 }
 
-JPEG *jpeg_init() {
-  JPEG *j = malloc(sizeof(JPEG));
 
-  // APP0
-  j->thumnaildata = NULL;
-  // EXTRA APP0 jpeg>=1.2(0x0102)
-  j->exapp0.thumnailstore.one_byte.pixels = NULL;
-  j->exapp0.thumnailstore.three_byte.pixels = NULL;
-  // COMMENT SECTION
-  j->comment.marker = 0xfffe;
-  j->comment.length = 0;
-  j->comment.data = malloc(1);
-  j->comment.data[0] = '\0';
 
-  // DEFINE QUANTIZE TABLE
-  j->quantizetables.length = 0;
-  j->quantizetables.marker = 0xffdb;
-  j->quantizetables.table_count = 0;
-  j->quantizetables.precision = 0;
-  j->quantizetables.table = NULL;
-
-  // START OF FRAME0
-  j->startofframe0.length = 0;
-  j->startofframe0.marker = 0xffc0;
-  j->startofframe0.precision = 0;
-  j->startofframe0.height = 0;
-  j->startofframe0.width = 0;
-  j->sof0.total_component = 0;
-  j->sof0.sofc = NULL;
-
-  // DEFINE RESTART INTERVAL
-  j->defineRestartInterval.length = 0;
-  j->defineRestartInterval.marker = 0xffc0;
-  j->defineRestartInterval.interval = 0;
-
-  // DEFINE HUFFMAN TABLE
-  j->huffmantable.length = 0;
-  j->huffmantable.marker = 0xffc0;
-  j->huffmantable.tableinfo = 0;
-  j->huffmantable.symbols = NULL;
-
-  // START OF SCAN
-  j->startofscan.length = 0;
-  j->startofscan.marker = 0xffc0;
-  j->startofscan.component_count = 0;
-  j->startofscan.componentdata = NULL;
-
-  // ACTUAL COMPRESSED DATA
-  j->compresseddata = NULL;
-  return j;
-}
-
-JPEG *jpeg_load_image(const char *file_name) {
-  FILE *f = fopen(file_name, "rb");
-  if (f == NULL) {
-    logn("Failed To Open the Image File %s", file_name);
-    exit(1);
-  }
-  JPEG *temp = jpeg_init();
-  jpeg_cast(f, temp);
-  return temp;
-}
-
-void jpeg_free(JPEG *image) {
-
-  if (image->thumnaildata != NULL) {
-    free(image->thumnaildata);
-    image->thumnaildata = NULL;
-  }
-  if (image->exapp0.thumnailstore.one_byte.pixels != NULL) {
-    free(image->exapp0.thumnailstore.one_byte.pixels);
-    image->exapp0.thumnailstore.one_byte.pixels = NULL;
-  }
-  if (image->exapp0.thumnailstore.three_byte.pixels != NULL) {
-    free(image->exapp0.thumnailstore.three_byte.pixels);
-    image->exapp0.thumnailstore.three_byte.pixels = NULL;
-  }
-  // one byte will be allocated fro comment section
-  // to display NULL byte to make sure their is no
-  // comment
-  free(image->comment.data);
-  image->comment.data = NULL;
-
-  if (image->quantizetables.table != NULL) {
-    free(image->quantizetables.table);
-    image->quantizetables.table = NULL;
-  }
-
-  if (image->sof0.sofc != NULL) {
-    free(image->sof0.sofc);
-    image->sof0.sofc = NULL;
-  }
-
-  if (image->huffmantable.symbols != NULL) {
-    free(image->huffmantable.symbols);
-    image->huffmantable.symbols = NULL;
-  }
-  if (image->startofscan.componentdata != NULL) {
-    free(image->startofscan.componentdata);
-    image->startofscan.componentdata = NULL;
-  }
-  if (image->compresseddata != NULL) {
-    free(image->compresseddata);
-    image->compresseddata = NULL;
-  }
-
-  // finally free the JPEG struct pointer
-  free(image);
-
-  image = NULL;
-}
 
 int main(void) {
 
