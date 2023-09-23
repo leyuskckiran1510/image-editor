@@ -7,7 +7,12 @@
 
 #define log(formate, ...)                                                      \
   printf("[ "__FILE__                                                          \
-         ":%d ](message)\t" formate "\n",                                      \
+         ":%d ](message)\t\t" formate "",                                      \
+         __LINE__, ##__VA_ARGS__);
+
+#define logn(formate, ...)                                                      \
+  printf("[ "__FILE__                                                          \
+         ":%d ](message)\t\t" formate "\n",                                      \
          __LINE__, ##__VA_ARGS__);
 
 typedef struct {
@@ -127,6 +132,17 @@ typedef struct{
 }DHT;
 
 typedef struct{
+  uint16_t marker;
+  uint16_t length;
+  union{
+  uint8_t component_count;
+  uint8_t total_component;
+  };
+  uint8_t *componentdata;
+  uint8_t padding[3];
+} SOS;
+
+typedef struct{
   uint16_t soi;
   uint16_t marker;
   uint16_t length;
@@ -142,12 +158,19 @@ typedef struct{
   COM comment;
   DQT quantizetables;
   union{
-  SOF start_of_frame0;
+  SOF startofframe0;
   SOF sof0;
   };
 
   DRI defineRestartInterval;
   DHT huffmantable;
+  SOS startofscan;
+  union{
+  uint8_t *compresseddata;
+  uint8_t *compressed_data;
+  uint8_t *data;
+};
+  uint16_t eof;
 
 } JPEG;
 

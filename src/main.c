@@ -18,35 +18,56 @@ void binary(unsigned short int x, char *final) {
 }
 
 void jpeg_display(JPEG j) {
-  printf("%s %hu \n", "soi", j.soi);
-  printf("%s %hu \n", "marker", j.marker);
-  printf("%s %hu \n", "length", j.length);
-  printf("%s %s \n", "identifier", j.identifier);
-  printf("%s %hu \n", "version", j.version);
-  printf("%s %hu \n", "density_unit", j.density_unit);
-  printf("%s %hu \n", "xdensity", j.xdensity);
-  printf("%s %hu \n", "ydensity", j.ydensity);
-  printf("%s %hu \n", "xthumbnail", j.xthumbnail);
-  printf("%s %hu \n", "ythumbnail", j.ythumbnail);
+  log("------Start Of JPEG IMAGE-------\n");
+  logn("%s %hu \n", "soi", j.soi);
 
-  printf("------QUANTIZATION TABLE------\n");
-  printf("%s %hu \n", "length", j.quantizetables.length);
-  printf("%s %hu \n", "marker", j.quantizetables.marker);
-  printf("%s %hu \n", "precession", j.quantizetables.precision);
-  printf("%s %hu \n", "table count", j.quantizetables.table_count);
+  log("------JPEG/JFIF Image Segment ( APP-0 )------\n");
+  log("%s %hu \n", "marker", j.marker);
+  log("%s %hu \n", "length", j.length);
+  log("%s %s \n", "identifier", j.identifier);
+  log("%s %hu \n", "version", j.version);
+  log("%s %hu \n", "density_unit", j.density_unit);
+  log("%s %hu \n", "xdensity", j.xdensity);
+  log("%s %hu \n", "ydensity", j.ydensity);
+  log("%s %hu \n", "xthumbnail", j.xthumbnail);
+  logn("%s %hu \n", "ythumbnail", j.ythumbnail);
 
-  printf("------Start of Frame-0 Segment (SOF-0)------\n");
-  printf("%s %hu \n", "length", j.sof0.length);
-  printf("%s %hu \n", "marker", j.sof0.marker);
-  printf("%s %hu \n", "precession", j.sof0.precision);
-  printf("%s %hu \n", "width", j.sof0.width);
-  printf("%s %hu \n", "height", j.sof0.height);
-  printf("%s %hu \n", "total component", j.sof0.total_component);
+  log("------Comment Segment ( COM )------\n");
+  log("%s %hu \n", "length", j.comment.length);
+  log("%s %hu \n", "marker", j.comment.marker);
+  logn("%s %s \n", "precession", j.comment.data);
 
-  printf("------Define restart interval ( DRI )------\n");
-  printf("%s %hu \n", "length", j.defineRestartInterval.length);
-  printf("%s %hu \n", "marker", j.defineRestartInterval.marker);
-  printf("%s %hu \n", "interval", j.defineRestartInterval.interval);
+  log("------Define Quantization Table Segment ( DQT )------\n");
+  log("%s %hu \n", "length", j.quantizetables.length);
+  log("%s %hu \n", "marker", j.quantizetables.marker);
+  log("%s %hu \n", "precession", j.quantizetables.precision);
+  logn("%s %hu \n", "table count", j.quantizetables.table_count);
+
+  log("------Start of Frame-0 Segment ( SOF-0 ) ------\n");
+  log("%s %hu \n", "length", j.sof0.length);
+  log("%s %hu \n", "marker", j.sof0.marker);
+  log("%s %hu \n", "precession", j.sof0.precision);
+  log("%s %hu \n", "width", j.sof0.width);
+  log("%s %hu \n", "height", j.sof0.height);
+  logn("%s %hu \n", "total component", j.sof0.total_component);
+
+  log("------Define restart interval ( DRI )------\n");
+  log("%s %hu \n", "length", j.defineRestartInterval.length);
+  log("%s %hu \n", "marker", j.defineRestartInterval.marker);
+  logn("%s %hu \n", "interval", j.defineRestartInterval.interval);
+
+  log("------Define Huffman Table Segment ( DHT )------\n");
+  log("%s %hu \n", "length", j.huffmantable.length);
+  log("%s %hu \n", "marker", j.huffmantable.marker);
+  logn("%s %hu \n", "tableinfo", j.huffmantable.tableinfo);
+
+  log("------Start of Scan Segment ( SOS )------\n");
+  log("%s %hu \n", "length", j.startofscan.length);
+  log("%s %hu \n", "marker", j.startofscan.marker);
+  logn("%s %hu \n", "total Component", j.startofscan.total_component);
+
+  log("------End of Image Segment ( EOI )------\n");
+  log("%s %hu \n", "marker", j.eof);
 }
 
 void print(uint x) { printf("%s %hu \n", "UINT", x); }
@@ -59,6 +80,8 @@ void exapp0_cast(FILE *fp, EXAPP0 *exapp0) {
 
 void jpeg_cast(FILE *fp, JPEG *j) {
   int dummy__ = 0, endian_cng = 0;
+
+  // APP0 and headers
   dummy__ += fread(&j->soi, 1, 2, fp);
   dummy__ += fread(&j->marker, 1, 2, fp);
   dummy__ += fread(&j->length, 1, 2, fp);
@@ -84,8 +107,10 @@ void jpeg_cast(FILE *fp, JPEG *j) {
     j->xdensity = __builtin_bswap16(j->xdensity);
     j->ydensity = __builtin_bswap16(j->ydensity);
   }
+
+  // thumnail from app0
   if (j->length > 16) {
-    log("Reached unreachable");
+    log("Reached unreachable\n");
     dummy__ +=
         fread(j->thumnaildata, sizeof(RGB), j->xthumbnail * j->ythumbnail, fp);
   }
@@ -93,9 +118,10 @@ void jpeg_cast(FILE *fp, JPEG *j) {
     exapp0_cast(fp, &j->exapp0);
   }
 
+  // COMMENT Section Parsing
   uint16_t next_flag;
-
   dummy__ += fread(&next_flag, 2, 1, fp);
+
   switch (next_flag) {
   case 0xfffe:
   case 0xfeff: {
@@ -112,7 +138,7 @@ void jpeg_cast(FILE *fp, JPEG *j) {
   }
   }
 
-  // print(next_flag);
+  // Quantize Table Parsing
   switch (next_flag) {
   case 0xffdb:
   case 0xdbff: {
@@ -140,18 +166,19 @@ void jpeg_cast(FILE *fp, JPEG *j) {
   }
   }
 
+  // Start OF Frame 0 Parsing
   switch (next_flag) {
   case 0xffc0:
   case 0xc0ff: {
-    dummy__ += fread(&j->start_of_frame0.length, 2, 1, fp);
-    dummy__ += fread(&j->start_of_frame0.precision, 1, 1, fp);
-    dummy__ += fread(&j->start_of_frame0.height, 2, 1, fp);
-    dummy__ += fread(&j->start_of_frame0.width, 2, 1, fp);
+    dummy__ += fread(&j->startofframe0.length, 2, 1, fp);
+    dummy__ += fread(&j->startofframe0.precision, 1, 1, fp);
+    dummy__ += fread(&j->startofframe0.height, 2, 1, fp);
+    dummy__ += fread(&j->startofframe0.width, 2, 1, fp);
     if (endian_cng) {
       next_flag = __builtin_bswap16(next_flag);
-      j->start_of_frame0.length = __builtin_bswap16(j->start_of_frame0.length);
-      j->start_of_frame0.height = __builtin_bswap16(j->start_of_frame0.height);
-      j->start_of_frame0.width = __builtin_bswap16(j->start_of_frame0.width);
+      j->startofframe0.length = __builtin_bswap16(j->startofframe0.length);
+      j->startofframe0.height = __builtin_bswap16(j->startofframe0.height);
+      j->startofframe0.width = __builtin_bswap16(j->startofframe0.width);
     }
     j->sof0.marker = next_flag;
     dummy__ += fread(&j->sof0.total_component, 1, 1, fp);
@@ -166,6 +193,7 @@ void jpeg_cast(FILE *fp, JPEG *j) {
   }
   }
 
+  // Define Restart Interval Parsing
   switch (next_flag) {
   case 0xddff:
   case 0xffdd: {
@@ -180,22 +208,13 @@ void jpeg_cast(FILE *fp, JPEG *j) {
     }
     j->defineRestartInterval.marker = next_flag;
 
-
     // next flag
     dummy__ += fread(&next_flag, 2, 1, fp);
     break;
-    break;
   }
   }
 
-  log("Current File Pointer Location %d == %ld",dummy__,ftell(fp));
-  log("Next Flag is at %hu",next_flag);
-  fseek(fp,-2,SEEK_CUR);
-  log("Current File Pointer Location %d == %ld",dummy__,ftell(fp));
-  dummy__ += fread(&next_flag, 2, 1, fp);
-  log("Next Flag is at %hu",next_flag);
-  return;
-
+  // Huffman Table Parsing
   switch (next_flag) {
   case 0xffc4:
   case 0xc4ff: {
@@ -203,63 +222,171 @@ void jpeg_cast(FILE *fp, JPEG *j) {
     dummy__ += fread(&j->huffmantable.tableinfo, 1, 1, fp);
     if (endian_cng) {
       next_flag = __builtin_bswap16(next_flag);
-      j->huffmantable.length =
-          __builtin_bswap16(j->huffmantable.length);
+      j->huffmantable.length = __builtin_bswap16(j->huffmantable.length);
     }
     j->huffmantable.marker = next_flag;
-    log("length of data %hu",j->huffmantable.length);
-    for (int i = 0; i < 16; ++i)
-    {
-      dummy__+=fread(&j->huffmantable.symbolcount[i],1,1,fp);
-      print(j->huffmantable.symbolcount[i]);
-    }
+    dummy__ += fread(j->huffmantable.symbolcount, 16, 1, fp);
+    int symbols_size =
+        j->huffmantable.length -
+        (sizeof(j->huffmantable.symbolcount) + sizeof(j->huffmantable.length) +
+         sizeof(j->huffmantable.tableinfo));
+    j->huffmantable.symbols = malloc(symbols_size);
+    dummy__ += fread(j->huffmantable.symbols, symbols_size, 1, fp);
 
     // next flag
     dummy__ += fread(&next_flag, 2, 1, fp);
     break;
-    }
+  }
   }
 
-  /*
-  log("Starting...");
-  log("Current DUMP location is %d", dummy__);
-  print(next_flag);
-  for (int p=0;p<10;p++) {
-      dummy__ += fread(&next_flag, 2, 1, fp);
-      print(next_flag);
-      switch (next_flag) {
-      case 0xffc4:
-      case 0xc4ff: {
-        break;
-      }
-      case 65497:
-      case 0x99fd:{
-        break;
-      }
-      default:
-        continue;
-      }
-      break;
-    }*/
+  // Start of Scan Segment (SOS)
+  switch (next_flag) {
+  case 0xdaff:
+  case 0xffda: {
+    dummy__ += fread(&j->startofscan.length, 2, 1, fp);
+    dummy__ += fread(&j->startofscan.component_count, 1, 1, fp);
+    if (endian_cng) {
+      next_flag = __builtin_bswap16(next_flag);
+      j->startofscan.length = __builtin_bswap16(j->startofscan.length);
+    }
+    j->startofscan.marker = next_flag;
+    j->startofscan.componentdata = malloc(2 * j->startofscan.component_count);
+    dummy__ += fread(j->startofscan.componentdata,
+                     2 * j->startofscan.component_count, 1, fp);
+    dummy__ += fread(j->startofscan.padding, 3, 1, fp);
+    break;
+  }
+  }
 
-  // (void)dummy__;
+  long pointer_backup = ftell(fp);
+  fseek(fp, 0, SEEK_END);
+  long remaning_bytes = ftell(fp) - pointer_backup;
+  fseek(fp, pointer_backup, SEEK_SET);
+  j->compresseddata = malloc(remaning_bytes - 2);
+  dummy__ += fread(j->compresseddata, remaning_bytes - 2, 1, fp);
+  dummy__ += fread(&next_flag, 2, 1, fp);
+
+  if (endian_cng) {
+    next_flag = __builtin_bswap16(next_flag);
+  }
+  j->eof = next_flag;
 }
 
-void load_image(const char *file_name) {
+JPEG *jpeg_init() {
+  JPEG *j = malloc(sizeof(JPEG));
+
+  // APP0
+  j->thumnaildata = NULL;
+  // EXTRA APP0 jpeg>=1.2(0x0102)
+  j->exapp0.thumnailstore.one_byte.pixels = NULL;
+  j->exapp0.thumnailstore.three_byte.pixels = NULL;
+  // COMMENT SECTION
+  j->comment.marker = 0xfffe;
+  j->comment.length = 0;
+  j->comment.data = malloc(1);
+  j->comment.data[0] = '\0';
+
+  // DEFINE QUANTIZE TABLE
+  j->quantizetables.length = 0;
+  j->quantizetables.marker = 0xffdb;
+  j->quantizetables.table_count = 0;
+  j->quantizetables.precision = 0;
+  j->quantizetables.table = NULL;
+
+  // START OF FRAME0
+  j->startofframe0.length = 0;
+  j->startofframe0.marker = 0xffc0;
+  j->startofframe0.precision = 0;
+  j->startofframe0.height = 0;
+  j->startofframe0.width = 0;
+  j->sof0.total_component = 0;
+  j->sof0.sofc = NULL;
+
+  // DEFINE RESTART INTERVAL
+  j->defineRestartInterval.length = 0;
+  j->defineRestartInterval.marker = 0xffc0;
+  j->defineRestartInterval.interval = 0;
+
+  // DEFINE HUFFMAN TABLE
+  j->huffmantable.length = 0;
+  j->huffmantable.marker = 0xffc0;
+  j->huffmantable.tableinfo = 0;
+  j->huffmantable.symbols = NULL;
+
+  // START OF SCAN
+  j->startofscan.length = 0;
+  j->startofscan.marker = 0xffc0;
+  j->startofscan.component_count = 0;
+  j->startofscan.componentdata = NULL;
+
+  // ACTUAL COMPRESSED DATA
+  j->compresseddata = NULL;
+  return j;
+}
+
+JPEG *jpeg_load_image(const char *file_name) {
   FILE *f = fopen(file_name, "rb");
+  JPEG *temp = jpeg_init();
   if (f == NULL) {
-    log("Failed To Open the Image File %s", file_name);
+    logn("Failed To Open the Image File %s", file_name);
     exit(1);
   }
-  JPEG *temp = malloc(sizeof(JPEG));
   jpeg_cast(f, temp);
+  return temp;
+}
 
-  jpeg_display(*temp);
-  free(temp);
+void jpeg_free(JPEG *image) {
+
+  if (image->thumnaildata != NULL) {
+    free(image->thumnaildata);
+    image->thumnaildata = NULL;
+  }
+  if (image->exapp0.thumnailstore.one_byte.pixels != NULL) {
+    free(image->exapp0.thumnailstore.one_byte.pixels);
+    image->exapp0.thumnailstore.one_byte.pixels = NULL;
+  }
+  if (image->exapp0.thumnailstore.three_byte.pixels != NULL) {
+    free(image->exapp0.thumnailstore.three_byte.pixels);
+    image->exapp0.thumnailstore.three_byte.pixels = NULL;
+  }
+  // one byte will be allocated fro comment section
+  // to display NULL byte to make sure their is no
+  // comment
+  free(image->comment.data);
+  image->comment.data = NULL;
+
+  if (image->quantizetables.table != NULL) {
+    free(image->quantizetables.table);
+    image->quantizetables.table = NULL;
+  }
+
+  if (image->sof0.sofc != NULL) {
+    free(image->sof0.sofc);
+    image->sof0.sofc = NULL;
+  }
+
+  if (image->huffmantable.symbols != NULL) {
+    free(image->huffmantable.symbols);
+    image->huffmantable.symbols = NULL;
+  }
+  if (image->startofscan.componentdata != NULL) {
+    free(image->startofscan.componentdata);
+    image->startofscan.componentdata = NULL;
+  }
+  if (image->compresseddata != NULL) {
+    free(image->compresseddata);
+    image->compresseddata = NULL;
+  }
+
+  // finally free the JPEG struct pointer
+  free(image);
+  image = NULL;
 }
 
 int main(void) {
 
-  load_image("./src/test.jpg");
+  JPEG *image = jpeg_load_image("./src/test.jpg");
+  jpeg_display(*image);
+  jpeg_free(image);
   return 0;
 }
