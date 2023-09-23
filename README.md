@@ -26,6 +26,13 @@ git clone https://github.com/leyuskckiran1510/image-editor.git
 cd image-editor
 make
 ```
+# Sample Image Used
+## I am working with this image 
+  The Image was downlaoded from official jpeg image wesite at `2023-Sep-23:13-01-12 PM` \
+  [Original Image](https://jpeg.org/images/jpeg-home.jpg)
+  ![IMAGE USED FOR TESTING](./Images/sample.jpg)
 
 # Snapshots
+  `2023-Sep-23:13-01-57 PM`
+  ![](./Images/_09_23_23_.png)
 
